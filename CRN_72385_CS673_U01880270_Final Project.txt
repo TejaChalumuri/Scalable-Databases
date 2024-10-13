@@ -1,0 +1,55 @@
+LOAD CSV WITH HEADERS FROM 'file:///car_data.csv' AS row
+WITH row WHERE row.Car_Name IS NOT NULL AND row.Year IS NOT NULL
+MERGE (c:Car {Car_Name: row.Car_Name, Year: toInteger(row.Year)}) 
+SET c.Selling_Price = toFloat(row.Selling_Price),
+    c.Present_Price = toFloat(row.Present_Price),
+    c.Kms_Driven = toInteger(row.Kms_Driven),
+    c.Fuel_Type = row.Fuel_Type,
+    c.Seller_Type = row.Seller_Type,
+    c.Transmission = row.Transmission,
+    c.Owner = toInteger(row.Owner);
+
+MATCH (n:Car) RETURN n LIMIT 25
+
+MATCH (c:Car)
+WHERE c.Kms_Driven > 100000
+SET c:HighMileageCar;
+
+// Convert a property to a different type or scale
+MATCH (c:Car)
+SET c.Normalized_Price = c.Selling_Price / c.Year;
+
+// Create relationships between nodes based on certain conditions
+MATCH (c1:Car)-[:SAME_OWNER]->(c2:Car)
+WHERE c1.Owner = c2.Owner
+MERGE (c1)-[:SAME_OWNER_AS]->(c2);
+
+// Calculate average selling price by fuel type
+MATCH (c:Car)
+WITH c.Fuel_Type AS fuelType, AVG(c.Selling_Price) AS avgSellingPrice
+RETURN fuelType, avgSellingPrice;
+
+// Calculate the total count of cars by seller type
+MATCH (c:Car)
+WITH c.Seller_Type AS sellerType, COUNT(c) AS carCount
+RETURN sellerType, carCount;
+
+// Find the car with the highest present price
+MATCH (c:Car)
+WITH c ORDER BY c.Present_Price DESC LIMIT 1
+RETURN c.Car_Name, c.Present_Price;
+
+MATCH (c:Car)
+RETURN c;
+
+MATCH (c:Car)
+WHERE c.Selling_Price > 10.0
+RETURN c.Car_Name, c.Selling_Price;
+
+MATCH (c:Car)
+WHERE c.Fuel_Type = 'Petrol'
+RETURN c.Car_Name, c.Fuel_Type;
+
+MATCH (c:Car)
+WHERE c.Seller_Type = 'Dealer'
+RETURN c.Car_Name, c.Seller_Type;
